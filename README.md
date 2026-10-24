@@ -1,9 +1,7 @@
-# 🌸 COCO Eventos
+# 🌸 COCO Eventos Free version
 
 ##  ¿Para qué sirve?
-Hola hice proyecto para asistir a los eventos de la [@cocoloser ](https://cocoloser-esp.carrd.co/). Este es un proyecto que llevo pateando mucho tiempo. En resumen es un gestor de inventario y de ventas para tener algo más visual que el excel.
-
-Esto lo estoy generalizando para uso más general
+Hola hice proyecto para asistir a los eventos de la [@cocoloser ](https://cocoloser-esp.carrd.co/). Este es un proyecto que llevo pateando mucho tiempo. En resumen es un gestor de inventario y de ventas  al ser algo que uno siempre deja al final ayuda mucho para tener en cuenta que falta y que se vende realmente en un evento.
 
 ---
 
@@ -17,9 +15,6 @@ Esto lo estoy generalizando para uso más general
 
 ###  2. Punto de Venta (`Nueva Venta`) y Promociones Automáticas
 * **Navegación por Catálogo:** Filtros dinámicos por Categorías (ej. *Chapas, Stickers, Llaveros*) y Variantes/Subcategorías, además de buscador en tiempo real.
-* **Motor de Promociones por Variante:**
-  * Aplica ofertas automáticamente en el carrito (ej. `2 x $10.000`, `2 x $5.000`, `3 x $1.000`) al combinar distintos productos que pertenezcan a una misma variante en promoción.
-  * Calcula y desglosa en el modal de confirmación el **subtotal normal**, el **descuento aplicado** por cada promoción y el **total final a cobrar**.
 * **Control de Stock en Vivo:** Bloquea la selección de productos agotados (`Sin stock`) e impide agregar al carrito una cantidad mayor al stock disponible.
 
 ###  3. Gestión de Inventario
@@ -29,13 +24,11 @@ Esto lo estoy generalizando para uso más general
 ###  4. Gestor de Catálogo Integrado (`Catálogo`)
 Administración 100% desde la aplicación, sin depender de código externo:
 * **Categorías:** Creación de nuevas familias de productos.
-* **Variantes y Promociones:** Creación de subcategorías nuevas o edición de variantes existentes para activar, modificar o eliminar ofertas (`Lleva X cantidad por $Y`).
+* **Variantes y Promociones:** Creación de subcategorías nuevas o edición de variantes existentes para activar.
 * **Productos:** Registro de nuevos productos asignando categoría, variante, precio unitario y stock inicial.
 
 ###  5. Control por Eventos
 * **Evento Activo:** Asocia todas las ventas nuevas al evento en curso, mostrando en tiempo real sus ingresos, cantidad de ventas y unidades vendidas.
-* **Cierre e Historial:** Permite finalizar un evento guardando sus métricas históricas y abrir uno nuevo para la siguiente feria.
-* **Detalle por Evento:** Al tocar un evento finalizado, muestra fecha de inicio/término, ingresos totales, unidades vendidas y el producto estrella (más vendido) de esa jornada.
 
 ###  6. Reportes y Estadísticas (`Ventas`)
 * **Métricas Globales:** Total histórico de ingresos y número de transacciones realizadas.
@@ -100,7 +93,7 @@ src/
 
 ##  Actualizaciones a futuro 
 
-* **Landing Page de Descarga:**
-* **Importación y Exportación con Excel** 
+* **Landing Page de Descarga:** (link:)
+* **Importación y Exportación con Excel**  (esto hya esta diseñado pero para otra version)
 * **Imágenes de Productos**  (esto solo por flojera no lo e hecho)
 

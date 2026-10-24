@@ -19,7 +19,8 @@ export default function TabLayout() {
           borderTopWidth: 1,
           borderTopColor: Palette.border,
           paddingBottom: 5,
-          height: 60,
+          height: 80,
+
         },
       }}
     >

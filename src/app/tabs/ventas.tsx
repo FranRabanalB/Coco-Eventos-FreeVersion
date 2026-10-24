@@ -17,14 +17,12 @@ import { AppText } from "../../components/app-text";
 import { Palette } from "../../constants/theme";
 import {
   Evento,
-  finalizarEvento,
   getDetallesVenta,
   getEstadisticasVentas,
   getEventoActivo,
   getVentas,
   Venta,
 } from "../../database/queries";
-import { exportarVentasAExcel } from "../../utils/excel-manager";
 
 export default function VentasScreen() {
   const [cargando, setCargando] = useState(true);
@@ -80,7 +78,7 @@ export default function VentasScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await finalizarEvento(eventoActivo.id);
+              // await finalizarEvento(eventoActivo.id);
               Alert.alert(
                 "Evento terminado",
                 "Las ventas e ingresos quedaron guardados.",
@@ -124,32 +122,14 @@ export default function VentasScreen() {
         subtitle="Reporte de Ventas"
         rightContent={
           <TouchableOpacity
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: Palette.blushLight,
-              paddingHorizontal: 12,
-              paddingVertical: 7,
-              borderRadius: 20,
-            }}
-            onPress={async () => {
-              try {
-                await exportarVentasAExcel();
-              } catch (error: any) {
-                Alert.alert("Error", error.message);
-              }
+            style={{ flexDirection: "row", alignItems: "center", backgroundColor: Palette.blushLight, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 }}
+            onPress={() => {
+              // --- BLOQUEO VERSIÓN GRATIS ---
+              Alert.alert('⭐ Función Pro', 'La exportación de reportes a Excel solo está disponible en la versión Pro.');
             }}
           >
-            <Ionicons
-              name="download-outline"
-              size={18}
-              color={Palette.coralStrong}
-            />
-            <AppText
-              variant="caption"
-              color={Palette.coralStrong}
-              style={{ marginLeft: 5, fontWeight: "bold" }}
-            >
+            <Ionicons name="download-outline" size={18} color={Palette.coralStrong} />
+            <AppText variant="caption" color={Palette.coralStrong} style={{ marginLeft: 5, fontWeight: "bold" }}>
               Exportar
             </AppText>
           </TouchableOpacity>
@@ -217,14 +197,14 @@ export default function VentasScreen() {
 
        <View style={styles.section}>
           <AppText variant="sectionTitle" style={{ marginBottom: 12 }}>
-            📈 Productos Más Vendidos
+             Productos Más Vendidos
           </AppText>
           {estadisticas?.masVendidos?.length > 0 ? (
             estadisticas.masVendidos.map((item: any, index: number) => (
               <TouchableOpacity 
                 key={index} 
                 style={styles.topProduct}
-                onPress={() => Alert.alert('ℹ️ Detalles', `Categoría: ${item.categoria_nombre}\nSubcategoría: ${item.variante_nombre}`)}
+                onPress={() => Alert.alert(' Detalles', `Categoría: ${item.categoria_nombre}\nSubcategoría: ${item.variante_nombre}`)}
               >
                 <View style={styles.topProductRank}>
                   <AppText
@@ -257,7 +237,7 @@ export default function VentasScreen() {
 
         <View style={[styles.section, { marginBottom: 25 }]}>
           <AppText variant="sectionTitle" style={{ marginBottom: 12 }}>
-            🕐 Últimas Ventas
+             Últimas Ventas
           </AppText>
           {ventas.length > 0 ? (
             ventas.slice(0, 10).map((venta) => (

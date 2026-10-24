@@ -19,13 +19,12 @@ import {
   getCategorias,
   getVariantesByCategoria,
   Variante,
+  actualizarVariante,
+  getInventarioCompleto,
 } from '../../database/queries';
-import { AppHeader } from '../../components/app-header';
 import { AppText } from '../../components/app-text';
 import { Palette } from '../../constants/theme';
-import { exportarInventarioAExcel, importarExcel } from '../../utils/excel-manager';
-import { procesarImportacionExcel } from '../../database/queries';
-import { ActivityIndicator } from 'react-native';
+import { AppHeader } from '../../components/app-header';
 
 
 export default function GestionarCatalogoScreen() {
@@ -38,12 +37,10 @@ export default function GestionarCatalogoScreen() {
   // Categoría
   const [nombreCategoria, setNombreCategoria] = useState('');
 
-  // Variante / Promo
+  // Variante (Sin Promociones)
   const [catSeleccionadaVar, setCatSeleccionadaVar] = useState<number | null>(null);
   const [varianteEditandoId, setVarianteEditandoId] = useState<number | null>(null);
   const [nombreVariante, setNombreVariante] = useState('');
-  const [promoCantidad, setPromoCantidad] = useState('');
-  const [promoPrecio, setPromoPrecio] = useState('');
 
   // Producto
   const [catSeleccionadaProd, setCatSeleccionadaProd] = useState<number | null>(null);
@@ -52,42 +49,17 @@ export default function GestionarCatalogoScreen() {
   const [precioProducto, setPrecioProducto] = useState('');
   const [stockProducto, setStockProducto] = useState('');
 
-  //excel
-  const [importando, setImportando] = useState(false);
- // --- INICIO FUNCIONES EXCEL ---
-  const [procesandoExcel, setProcesandoExcel] = useState(false);
+  // --- CONTADOR VERSIÓN GRATIS ---
+  const [totalProductos, setTotalProductos] = useState(0);
 
-  const handleImportarExcel = async () => {
-    try {
-      setProcesandoExcel(true);
-      const datos = await importarExcel();
-      
-      if (datos && datos.length > 0) {
-        const importados = await procesarImportacionExcel(datos);
-        Alert.alert('¡Éxito!', `Se importaron ${importados} productos correctamente.`);
-        cargarCategorias(); // Recargar la vista
-      }
-    } catch (error: any) {
-      Alert.alert('Error de Importación', error.message);
-    } finally {
-      setProcesandoExcel(false);
-    }
+  const actualizarConteo = async () => {
+    const inv = await getInventarioCompleto();
+    setTotalProductos(inv.length);
   };
-
-  const handleExportarExcel = async () => {
-    try {
-      setProcesandoExcel(true);
-      await exportarInventarioAExcel();
-    } catch (error: any) {
-      Alert.alert('Error de Exportación', error.message);
-    } finally {
-      setProcesandoExcel(false);
-    }
-  };
-  // --- FIN FUNCIONES EXCEL ---
 
   useEffect(() => {
     cargarCategorias();
+    actualizarConteo();
   }, [tabActiva]);
 
   useEffect(() => {
@@ -130,15 +102,11 @@ export default function GestionarCatalogoScreen() {
   const seleccionarModoNuevaVariante = () => {
     setVarianteEditandoId(null);
     setNombreVariante('');
-    setPromoCantidad('');
-    setPromoPrecio('');
   };
 
   const seleccionarVarianteParaEditar = (v: Variante) => {
     setVarianteEditandoId(v.id);
     setNombreVariante(v.nombre);
-    setPromoCantidad(v.promo_cantidad ? v.promo_cantidad.toString() : '');
-    setPromoPrecio(v.promo_precio ? v.promo_precio.toString() : '');
   };
 
   const handleCrearCategoria = async () => {
@@ -166,25 +134,16 @@ export default function GestionarCatalogoScreen() {
       return;
     }
 
-    const pCantidad = parseInt(promoCantidad) || null;
-    const pPrecio = parseInt(promoPrecio) || null;
-
-    if ((pCantidad && !pPrecio) || (!pCantidad && pPrecio)) {
-      Alert.alert(
-        'Error',
-        'Para configurar una oferta debes llenar la cantidad Y el precio promo, o dejar ambos vacíos.'
-      );
-      return;
-    }
-
     try {
-      await crearVariante(
-        catSeleccionadaVar,
-        nombreVariante.trim(),
-        pCantidad,
-        pPrecio
-      );
-      Alert.alert('¡Éxito!', 'Variante creada correctamente');
+      if (varianteEditandoId) {
+        // Actualizar variante existente SIN promoción
+        await actualizarVariante(varianteEditandoId, nombreVariante.trim(), null, null);
+        Alert.alert('¡Éxito!', 'Variante actualizada correctamente');
+      } else {
+        // Crear variante nueva SIN promoción
+        await crearVariante(catSeleccionadaVar, nombreVariante.trim(), null, null);
+        Alert.alert('¡Éxito!', 'Variante creada correctamente');
+      }
 
       await cargarVariantesParaEdicion(catSeleccionadaVar);
       setCatSeleccionadaProd(catSeleccionadaVar);
@@ -218,6 +177,7 @@ export default function GestionarCatalogoScreen() {
       setNombreProducto('');
       setPrecioProducto('');
       setStockProducto('');
+      actualizarConteo(); // Refresca el contador de la versión Gratis
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -259,33 +219,9 @@ export default function GestionarCatalogoScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      
+      {/* AQUÍ VA EL ENCABEZADO QUE FALTABA */}
       <AppHeader subtitle="Gestión de Catálogo" showBack={true} />
-           {/* --- INICIO BOTONES EXCEL --- */}
-      {procesandoExcel ? (
-        <View style={{ padding: 15, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={Palette.coralStrong} />
-          <AppText variant="caption">Procesando archivo...</AppText>
-        </View>
-      ) : (
-        <View style={{ flexDirection: 'row', paddingHorizontal: 15, paddingTop: 15, paddingBottom: 5, gap: 10 }}>
-          <TouchableOpacity 
-            style={{ flex: 1, backgroundColor: Palette.blushLight, padding: 12, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
-            onPress={handleImportarExcel}
-          >
-            <Ionicons name="download-outline" size={20} color={Palette.coralStrong} style={{ marginRight: 6 }} />
-            <AppText variant="bodyBold" color={Palette.coralStrong}>Importar</AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={{ flex: 1, backgroundColor: Palette.peach, padding: 12, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
-            onPress={handleExportarExcel}
-          >
-            <Ionicons name="share-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
-            <AppText variant="bodyBold" color="#fff">Exportar</AppText>
-          </TouchableOpacity>
-        </View>
-      )}
-      {/* --- FIN BOTONES EXCEL --- */}
 
       <View style={styles.tabsContainer}>
         <TouchableOpacity
@@ -301,7 +237,7 @@ export default function GestionarCatalogoScreen() {
           onPress={() => setTabActiva('variante')}
         >
           <AppText variant="caption" color={tabActiva === 'variante' ? '#fff' : Palette.textSecondary} style={{ fontWeight: 'bold' }}>
-            Variante / Promo
+            Variante
           </AppText>
         </TouchableOpacity>
         <TouchableOpacity
@@ -313,7 +249,7 @@ export default function GestionarCatalogoScreen() {
           </AppText>
         </TouchableOpacity>
       </View>
-
+      
       <ScrollView style={styles.content} contentContainerStyle={styles.contentPadding}>
         {tabActiva === 'categoria' && (
           <View style={styles.formCard}>
@@ -343,10 +279,10 @@ export default function GestionarCatalogoScreen() {
         {tabActiva === 'variante' && (
           <View style={styles.formCard}>
             <AppText variant="sectionTitle" style={{ marginBottom: 4 }}>
-              {varianteEditandoId ? 'Editar Variante / Promo' : 'Nueva Variante'}
+              {varianteEditandoId ? 'Editar Variante' : 'Nueva Variante'}
             </AppText>
             <AppText variant="caption" style={{ marginBottom: 18 }}>
-              Crea una variante o toca una existente para asignarle una oferta
+              Crea una variante o toca una existente para modificar su nombre
             </AppText>
 
             {renderSelectorCategorias(catSeleccionadaVar, setCatSeleccionadaVar)}
@@ -367,7 +303,6 @@ export default function GestionarCatalogoScreen() {
                   </TouchableOpacity>
 
                   {variantesDeCatVar.map((vari) => {
-                    const tienePromo = vari.promo_cantidad && vari.promo_precio;
                     const activa = varianteEditandoId === vari.id;
                     return (
                       <TouchableOpacity
@@ -376,8 +311,7 @@ export default function GestionarCatalogoScreen() {
                         onPress={() => seleccionarVarianteParaEditar(vari)}
                       >
                         <AppText variant="bodyBold" color={activa ? '#fff' : Palette.textSecondary}>
-                          {vari.nombre}{' '}
-                          {tienePromo ? `(${vari.promo_cantidad}x$${vari.promo_precio})` : ''}
+                          {vari.nombre}
                         </AppText>
                       </TouchableOpacity>
                     );
@@ -395,34 +329,6 @@ export default function GestionarCatalogoScreen() {
                 value={nombreVariante}
                 onChangeText={setNombreVariante}
               />
-            </View>
-
-            <AppText variant="caption" style={{ marginBottom: 12 }}>
-              Promoción (Opcional - Ej: 3x1000)
-            </AppText>
-            <View style={styles.row}>
-              <View style={[styles.inputContainer, { flex: 1, marginRight: 10 }]}>
-                <AppText variant="bodyBold" style={{ marginBottom: 8 }}>Lleva (Cant.)</AppText>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Ej. 3"
-                  placeholderTextColor={Palette.textMuted}
-                  keyboardType="numeric"
-                  value={promoCantidad}
-                  onChangeText={setPromoCantidad}
-                />
-              </View>
-              <View style={[styles.inputContainer, { flex: 1 }]}>
-                <AppText variant="bodyBold" style={{ marginBottom: 8 }}>Por ($)</AppText>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Ej. 1000"
-                  placeholderTextColor={Palette.textMuted}
-                  keyboardType="numeric"
-                  value={promoPrecio}
-                  onChangeText={setPromoPrecio}
-                />
-              </View>
             </View>
 
             <TouchableOpacity style={styles.submitButton} onPress={handleGuardarVariante}>
@@ -511,6 +417,13 @@ export default function GestionarCatalogoScreen() {
               <Ionicons name="save-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
               <AppText variant="button">Guardar Producto</AppText>
             </TouchableOpacity>
+
+            {/* --- CONTADOR DE VERSIÓN GRATIS --- */}
+            <AppText variant="caption" align="center" color={Palette.textSecondary} style={{ marginTop: 15 }}>
+              Has ingresado {totalProductos} de 10 productos (Versión Lite).
+              {totalProductos >= 10 && '\nLímite alcanzado. Actualiza a Pro.'}
+            </AppText>
+
           </View>
         )}
       </ScrollView>

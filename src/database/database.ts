@@ -1,6 +1,6 @@
 // src/database/database.ts
 import * as SQLite from 'expo-sqlite';
-import { seedDatabase } from './seed';
+
 
 export async function initDatabase() {
   try {
@@ -72,7 +72,6 @@ export async function initDatabase() {
     `);
 
     // Insertar datos iniciales
-    await seedDatabase(db);
 
     console.log('✅ Base de datos inicializada correctamente');
     return db;

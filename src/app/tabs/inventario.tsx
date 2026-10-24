@@ -112,7 +112,7 @@ export default function InventarioScreen() {
                   const bajos = productos.filter((p) => p.stock < 10);
                   if (bajos.length > 0) {
                     const nombres = bajos.map((p) => `• ${p.nombre} (${p.stock})`).join('\n');
-                    Alert.alert('⚠️ Stock bajo en esta variante', nombres);
+                    Alert.alert(' Stock bajo en esta variante', nombres);
                   }
                 }}
               >
