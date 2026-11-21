@@ -65,34 +65,6 @@ export default function VentasScreen() {
     }, []),
   );
 
-  const handleTerminarEvento = () => {
-    if (!eventoActivo) return;
-
-    Alert.alert(
-      "Terminar evento",
-      `¿Quieres cerrar "${eventoActivo.nombre}"? Sus ventas e ingresos quedarán guardados y se abrirá un evento nuevo.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Terminar",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // await finalizarEvento(eventoActivo.id);
-              Alert.alert(
-                "Evento terminado",
-                "Las ventas e ingresos quedaron guardados.",
-              );
-              await cargarDatos();
-            } catch (error) {
-              Alert.alert("Error", "No se pudo terminar el evento.");
-            }
-          },
-        },
-      ],
-    );
-  };
-
   // Función que abre el Modal y busca los detalles
   const handleVerDetalles = async (venta: Venta) => {
     try {
@@ -175,25 +147,7 @@ export default function VentasScreen() {
           </View>
         </View>
 
-        {eventoActivo && (
-          <View style={styles.eventoContainer}>
-            <View style={{ flex: 1, marginRight: 10 }}>
-              <AppText variant="caption">Evento activo</AppText>
-              <AppText variant="cardTitle" style={{ marginTop: 2 }}>
-                {eventoActivo.nombre}
-              </AppText>
-            </View>
-            <TouchableOpacity
-              style={styles.terminarEventoButton}
-              onPress={handleTerminarEvento}
-            >
-              <Ionicons name="flag-outline" size={18} color="#fff" />
-              <AppText variant="button" style={{ fontSize: 13, marginLeft: 6 }}>
-                Terminar evento
-              </AppText>
-            </TouchableOpacity>
-          </View>
-        )}
+       
 
        <View style={styles.section}>
           <AppText variant="sectionTitle" style={{ marginBottom: 12 }}>
@@ -352,14 +306,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderWidth: 1,
     borderColor: Palette.border,
-  },
-  terminarEventoButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Palette.coralStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
   },
   section: {
     backgroundColor: Palette.surface,

@@ -1,27 +1,28 @@
 // src/app/tabs/nueva-venta.tsx
-import { useState, useMemo, useCallback } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
-  View,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
-  Modal,
-  Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+  View,
+} from "react-native";
+import { AppHeader } from "../../components/app-header";
+import { AppText } from "../../components/app-text";
+import { CatalogoFilter } from "../../components/catalogo-filter";
+import { Palette } from "../../constants/theme";
 import {
-  guardarVentaConEvento,
-  getEventoActivo,
   calcularTotalesCarrito,
-  Producto,
   CartItem,
-} from '../../database/queries';
-import { useCatalogo } from '../../hooks/use-catalogo';
-import { AppHeader } from '../../components/app-header';
-import { CatalogoFilter } from '../../components/catalogo-filter';
-import { AppText } from '../../components/app-text';
-import { Palette } from '../../constants/theme';
+  getEventoActivo,
+  guardarVentaConEvento,
+  Producto,
+} from "../../database/queries";
+import { useCatalogo } from "../../hooks/use-catalogo";
 
 export default function NuevaVentaScreen() {
   const router = useRouter();
@@ -42,44 +43,53 @@ export default function NuevaVentaScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  const agregarAlCarrito = useCallback((producto: Producto) => {
-    if (producto.stock <= 0) {
-      Alert.alert('Sin stock', `No hay stock disponible de "${producto.nombre}"`);
-      return;
-    }
-
-    const varianteInfo = variantes.find((v) => v.id === producto.variante_id);
-
-    setCartItems((prev) => {
-      const existente = prev.find((item) => item.id === producto.id);
-      if (existente) {
-        if (existente.cantidad < producto.stock) {
-          return prev.map((item) =>
-            item.id === producto.id
-              ? { ...item, cantidad: item.cantidad + 1 }
-              : item
-          );
-        } else {
-          Alert.alert('Stock insuficiente', `No hay suficiente stock de "${producto.nombre}"`);
-          return prev;
-        }
+  const agregarAlCarrito = useCallback(
+    (producto: Producto) => {
+      if (producto.stock <= 0) {
+        Alert.alert(
+          "Sin stock",
+          `No hay stock disponible de "${producto.nombre}"`,
+        );
+        return;
       }
-      return [
-        ...prev,
-        {
-          id: producto.id,
-          variante_id: producto.variante_id,
-          variante_nombre: varianteInfo?.nombre,
-          nombre: producto.nombre,
-          precio: producto.precio,
-          cantidad: 1,
-          stock: producto.stock,
-          promo_cantidad: varianteInfo?.promo_cantidad ?? null,
-          promo_precio: varianteInfo?.promo_precio ?? null,
-        },
-      ];
-    });
-  }, [variantes]);
+
+      const varianteInfo = variantes.find((v) => v.id === producto.variante_id);
+
+      setCartItems((prev) => {
+        const existente = prev.find((item) => item.id === producto.id);
+        if (existente) {
+          if (existente.cantidad < producto.stock) {
+            return prev.map((item) =>
+              item.id === producto.id
+                ? { ...item, cantidad: item.cantidad + 1 }
+                : item,
+            );
+          } else {
+            Alert.alert(
+              "Stock insuficiente",
+              `No hay suficiente stock de "${producto.nombre}"`,
+            );
+            return prev;
+          }
+        }
+        return [
+          ...prev,
+          {
+            id: producto.id,
+            variante_id: producto.variante_id,
+            variante_nombre: varianteInfo?.nombre,
+            nombre: producto.nombre,
+            precio: producto.precio,
+            cantidad: 1,
+            stock: producto.stock,
+            promo_cantidad: varianteInfo?.promo_cantidad ?? null,
+            promo_precio: varianteInfo?.promo_precio ?? null,
+          },
+        ];
+      });
+    },
+    [variantes],
+  );
 
   const actualizarCantidad = useCallback((id: number, cambio: number) => {
     setCartItems((prev) =>
@@ -88,14 +98,17 @@ export default function NuevaVentaScreen() {
           if (item.id === id) {
             const nuevaCantidad = Math.max(0, item.cantidad + cambio);
             if (nuevaCantidad > item.stock) {
-              Alert.alert('Stock insuficiente', 'No hay suficiente stock para este producto');
+              Alert.alert(
+                "Stock insuficiente",
+                "No hay suficiente stock para este producto",
+              );
               return item;
             }
             return { ...item, cantidad: nuevaCantidad };
           }
           return item;
         })
-        .filter((item) => item.cantidad > 0)
+        .filter((item) => item.cantidad > 0),
     );
   }, []);
 
@@ -118,33 +131,33 @@ export default function NuevaVentaScreen() {
       const eventoActivo = await getEventoActivo();
 
       Alert.alert(
-        '✅ Venta confirmada',
-        `Venta #${ventaId} registrada correctamente\nEvento: ${eventoActivo?.nombre || 'Actual'}\nTotal cobrado: $${total}`,
+        "✅ Venta confirmada",
+        `Venta #${ventaId} registrada correctamente\nEvento: ${eventoActivo?.nombre || "Actual"}\nTotal cobrado: $${total}`,
         [
           {
-            text: 'OK',
+            text: "OK",
             onPress: () => {
               setCartItems([]);
               setShowConfirmModal(false);
               recargarProductosActuales();
-              router.push('/tabs/ventas');
+              router.push("/tabs/ventas");
             },
           },
-        ]
+        ],
       );
     } catch (error) {
-      Alert.alert('❌ Error', 'No se pudo completar la venta.');
+      Alert.alert("❌ Error", "No se pudo completar la venta.");
     } finally {
       setGuardando(false);
     }
   };
 
   const rechazarVenta = () => {
-    Alert.alert('Cancelar venta', '¿Seguro que quieres vaciar el carrito?', [
-      { text: 'Seguir editando', style: 'cancel' },
+    Alert.alert("Cancelar venta", "¿Seguro que quieres vaciar el carrito?", [
+      { text: "Seguir editando", style: "cancel" },
       {
-        text: 'Vaciar',
-        style: 'destructive',
+        text: "Vaciar",
+        style: "destructive",
         onPress: () => {
           setCartItems([]);
           setShowConfirmModal(false);
@@ -153,30 +166,84 @@ export default function NuevaVentaScreen() {
     ]);
   };
 
-  const renderProductItem = useCallback(({ item }: { item: Producto }) => (
-    <TouchableOpacity
-      style={[styles.productCard, item.stock <= 0 && styles.productCardDisabled]}
-      onPress={() => agregarAlCarrito(item)}
-      disabled={item.stock <= 0}
-    >
-      <View style={styles.productPlaceholder}>
-        <Ionicons name="pricetag" size={22} color={Palette.coral} />
+  const renderProductItem = useCallback(
+    ({ item }: { item: Producto }) => (
+      <TouchableOpacity
+        style={[
+          styles.productCard,
+          item.stock <= 0 && styles.productCardDisabled,
+        ]}
+        onPress={() => agregarAlCarrito(item)}
+        disabled={item.stock <= 0}
+      >
+        <View style={styles.productPlaceholder}>
+          <Ionicons name="pricetag" size={22} color={Palette.coral} />
+        </View>
+        <AppText
+          variant="caption"
+          color={Palette.textPrimary}
+          align="center"
+          numberOfLines={2}
+          style={{ minHeight: 32, marginBottom: 4 }}
+        >
+          {item.nombre}
+        </AppText>
+        <AppText variant="price">${item.precio}</AppText>
+        {item.stock > 0 ? (
+          <View style={styles.addButton}>
+            <Ionicons name="add" size={18} color="#fff" />
+          </View>
+        ) : (
+          <View style={styles.outOfStockBadge}>
+            <AppText variant="caption" style={{ fontSize: 10 }}>
+              Sin stock
+            </AppText>
+          </View>
+        )}
+      </TouchableOpacity>
+    ),
+    [agregarAlCarrito],
+  );
+
+  // --- NUEVO: PANTALLA DE ESTADO VACÍO (CUANDO NO HAY NADA CREADO) ---
+  if (categorias.length === 0) {
+    return (
+      <View style={styles.container}>
+        <AppHeader subtitle="Nueva Venta" />
+
+        <View style={styles.emptyStateContainer}>
+          {/* Imagen del tutorial con el tamaño ajustado */}
+          <Image
+            source={require("../../../assets/images/duraznomareado.png")}
+            style={{ width: 65, height: 65, marginBottom: 15 }}
+            resizeMode="contain"
+          />
+
+          <AppText variant="headerTitle" style={styles.emptyStateTitle}>
+            ¡Oh, no tienes nada que vender!
+          </AppText>
+          <AppText variant="body" style={styles.emptyStateText}>
+            Para poder generar una venta, primero debes registrar tus productos. Comienza
+            creando tu primera categoría.
+          </AppText>
+          <TouchableOpacity
+            style={styles.emptyStateButton}
+            onPress={() => router.push("/tabs/gestionar-catalogo" as any)}
+          >
+            <Ionicons
+              name="add-circle"
+              size={22}
+              color="#fff"
+              style={{ marginRight: 8 }}
+            />
+            <AppText variant="button" style={styles.emptyStateButtonText}>
+              Crear una categoría
+            </AppText>
+          </TouchableOpacity>
+        </View>
       </View>
-      <AppText variant="caption" color={Palette.textPrimary} align="center" numberOfLines={2} style={{ minHeight: 32, marginBottom: 4 }}>
-        {item.nombre}
-      </AppText>
-      <AppText variant="price">${item.precio}</AppText>
-      {item.stock > 0 ? (
-        <View style={styles.addButton}>
-          <Ionicons name="add" size={18} color="#fff" />
-        </View>
-      ) : (
-        <View style={styles.outOfStockBadge}>
-          <AppText variant="caption" style={{ fontSize: 10 }}>Sin stock</AppText>
-        </View>
-      )}
-    </TouchableOpacity>
-  ), [agregarAlCarrito]);
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -202,8 +269,16 @@ export default function NuevaVentaScreen() {
         renderItem={renderProductItem}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={50} color={Palette.textMuted} />
-            <AppText variant="subtitle" color={Palette.textMuted} style={{ marginTop: 10 }}>
+            <Ionicons
+              name="search-outline"
+              size={50}
+              color={Palette.textMuted}
+            />
+            <AppText
+              variant="subtitle"
+              color={Palette.textMuted}
+              style={{ marginTop: 10 }}
+            >
               No se encontraron productos
             </AppText>
           </View>
@@ -222,12 +297,20 @@ export default function NuevaVentaScreen() {
               </AppText>
             </View>
             <Ionicons name="cart" size={24} color="#fff" />
-            <AppText variant="sectionTitle" color="#fff" style={{ marginLeft: 10 }}>
+            <AppText
+              variant="sectionTitle"
+              color="#fff"
+              style={{ marginLeft: 10 }}
+            >
               ${total}
             </AppText>
             {resumenCarrito.descuentoTotal > 0 && (
               <View style={styles.promoPill}>
-                <AppText variant="caption" color={Palette.coralStrong} style={{ fontSize: 11, fontWeight: 'bold' }}>
+                <AppText
+                  variant="caption"
+                  color={Palette.coralStrong}
+                  style={{ fontSize: 11, fontWeight: "bold" }}
+                >
                   Oferta aplicada
                 </AppText>
               </View>
@@ -261,7 +344,8 @@ export default function NuevaVentaScreen() {
                   <View style={{ flex: 1 }}>
                     <AppText variant="bodyBold">{item.nombre}</AppText>
                     <AppText variant="caption">
-                      ${item.precio} x {item.cantidad} = ${item.precio * item.cantidad}
+                      ${item.precio} x {item.cantidad} = $
+                      {item.precio * item.cantidad}
                     </AppText>
                   </View>
                   <View style={styles.modalItemActions}>
@@ -269,16 +353,24 @@ export default function NuevaVentaScreen() {
                       style={styles.quantityButton}
                       onPress={() => actualizarCantidad(item.id, -1)}
                     >
-                      <AppText variant="cardTitle" color={Palette.coralStrong}>−</AppText>
+                      <AppText variant="cardTitle" color={Palette.coralStrong}>
+                        −
+                      </AppText>
                     </TouchableOpacity>
-                    <AppText variant="bodyBold" align="center" style={{ marginHorizontal: 10, minWidth: 20 }}>
+                    <AppText
+                      variant="bodyBold"
+                      align="center"
+                      style={{ marginHorizontal: 10, minWidth: 20 }}
+                    >
                       {item.cantidad}
                     </AppText>
                     <TouchableOpacity
                       style={styles.quantityButton}
                       onPress={() => actualizarCantidad(item.id, 1)}
                     >
-                      <AppText variant="cardTitle" color={Palette.coralStrong}>+</AppText>
+                      <AppText variant="cardTitle" color={Palette.coralStrong}>
+                        +
+                      </AppText>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={{ marginLeft: 10 }}
@@ -294,23 +386,39 @@ export default function NuevaVentaScreen() {
             <View style={styles.modalFooter}>
               {resumenCarrito.descuentoTotal > 0 && (
                 <View style={styles.promoBox}>
-                  <AppText variant="bodyBold" color={Palette.coralStrong} style={{ marginBottom: 4 }}>
+                  <AppText
+                    variant="bodyBold"
+                    color={Palette.coralStrong}
+                    style={{ marginBottom: 4 }}
+                  >
                     🎉 Promociones aplicadas:
                   </AppText>
                   {resumenCarrito.promosAplicadas.map((promo, idx) => (
-                    <AppText key={idx} variant="caption" color={Palette.textPrimary}>
+                    <AppText
+                      key={idx}
+                      variant="caption"
+                      color={Palette.textPrimary}
+                    >
                       • {promo}
                     </AppText>
                   ))}
                   <View style={styles.discountRow}>
                     <AppText variant="caption">Subtotal normal:</AppText>
-                    <AppText variant="caption" color={Palette.textMuted} style={{ textDecorationLine: 'line-through' }}>
+                    <AppText
+                      variant="caption"
+                      color={Palette.textMuted}
+                      style={{ textDecorationLine: "line-through" }}
+                    >
                       ${resumenCarrito.subtotalSinDescuento}
                     </AppText>
                   </View>
                   <View style={styles.discountRow}>
                     <AppText variant="caption">Ahorro promo:</AppText>
-                    <AppText variant="caption" color={Palette.coralStrong} style={{ fontWeight: 'bold' }}>
+                    <AppText
+                      variant="caption"
+                      color={Palette.coralStrong}
+                      style={{ fontWeight: "bold" }}
+                    >
                       -${resumenCarrito.descuentoTotal}
                     </AppText>
                   </View>
@@ -319,7 +427,11 @@ export default function NuevaVentaScreen() {
 
               <View style={styles.totalContainer}>
                 <AppText variant="cardTitle">Total a cobrar</AppText>
-                <AppText variant="headerTitle" color={Palette.coralStrong} style={{ fontSize: 24 }}>
+                <AppText
+                  variant="headerTitle"
+                  color={Palette.coralStrong}
+                  style={{ fontSize: 24 }}
+                >
                   ${total}
                 </AppText>
               </View>
@@ -329,7 +441,9 @@ export default function NuevaVentaScreen() {
                   onPress={rechazarVenta}
                   disabled={guardando}
                 >
-                  <AppText variant="bodyBold" color={Palette.textSecondary}>VACIAR</AppText>
+                  <AppText variant="bodyBold" color={Palette.textSecondary}>
+                    VACIAR
+                  </AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.confirmButton]}
@@ -337,7 +451,7 @@ export default function NuevaVentaScreen() {
                   disabled={guardando || cartItems.length === 0}
                 >
                   <AppText variant="button">
-                    {guardando ? 'GUARDANDO...' : 'CONFIRMAR'}
+                    {guardando ? "GUARDANDO..." : "CONFIRMAR"}
                   </AppText>
                 </TouchableOpacity>
               </View>
@@ -354,6 +468,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Palette.background,
   },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: Palette.surface,
+  },
   productGrid: {
     paddingHorizontal: 10,
     paddingBottom: 100,
@@ -364,10 +484,10 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.surface,
     borderRadius: 14,
     padding: 10,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
     borderColor: Palette.border,
-    maxWidth: '31%',
+    maxWidth: "31%",
   },
   productCardDisabled: {
     opacity: 0.45,
@@ -377,8 +497,8 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 23,
     backgroundColor: Palette.blushLight,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
   addButton: {
@@ -386,8 +506,8 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 6,
   },
   outOfStockBadge: {
@@ -398,16 +518,16 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   cartFloating: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     right: 20,
     left: 20,
   },
   cartButton: {
     backgroundColor: Palette.coralStrong,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 30,
     elevation: 4,
@@ -428,21 +548,21 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(45, 35, 36, 0.4)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(45, 35, 36, 0.4)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: Palette.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '85%',
+    maxHeight: "85%",
     paddingHorizontal: 20,
     paddingTop: 20,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: Palette.border,
@@ -452,24 +572,24 @@ const styles = StyleSheet.create({
     marginVertical: 15,
   },
   modalItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: Palette.border,
   },
   modalItemActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   quantityButton: {
     width: 28,
     height: 28,
     borderRadius: 14,
     backgroundColor: Palette.blushLight,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalFooter: {
     borderTopWidth: 1,
@@ -485,25 +605,25 @@ const styles = StyleSheet.create({
     borderColor: Palette.blush,
   },
   discountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 4,
   },
   totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 15,
   },
   modalButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   modalButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 14,
-    alignItems: 'center',
+    alignItems: "center",
   },
   rejectButton: {
     backgroundColor: Palette.blushLight,
@@ -513,8 +633,48 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 50,
+  },
+
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 30,
+    backgroundColor: "#f5f5f5",
+  },
+  emptyStateTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#2D2324",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  emptyStateText: {
+    fontSize: 15,
+    color: "#8C7A7B",
+    textAlign: "center",
+    marginBottom: 30,
+    lineHeight: 22,
+  },
+  emptyStateButton: {
+    backgroundColor: Palette.coralStrong,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 30,
+    shadowColor: Palette.coralStrong  ,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    
+  },
+  emptyStateButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

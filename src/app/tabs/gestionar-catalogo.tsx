@@ -25,10 +25,11 @@ import {
 import { AppText } from '../../components/app-text';
 import { Palette } from '../../constants/theme';
 import { AppHeader } from '../../components/app-header';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 export default function GestionarCatalogoScreen() {
-  const [tabActiva, setTabActiva] = useState<'categoria' | 'variante' | 'producto'>('producto');
+  const [tabActiva, setTabActiva] = useState<'categoria' | 'variante' | 'producto'>('categoria');
 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [variantes, setVariantes] = useState<Variante[]>([]);
@@ -41,6 +42,8 @@ export default function GestionarCatalogoScreen() {
   const [catSeleccionadaVar, setCatSeleccionadaVar] = useState<number | null>(null);
   const [varianteEditandoId, setVarianteEditandoId] = useState<number | null>(null);
   const [nombreVariante, setNombreVariante] = useState('');
+  const [alertaStockMinimo, setAlertaStockMinimo] = useState('10');
+  const [limitesStock, setLimitesStock] = useState<Record<number, number>>({});
 
   // Producto
   const [catSeleccionadaProd, setCatSeleccionadaProd] = useState<number | null>(null);
@@ -57,9 +60,19 @@ export default function GestionarCatalogoScreen() {
     setTotalProductos(inv.length);
   };
 
+ const cargarLimitesStock = async () => {
+    try {
+      const guardado = await AsyncStorage.getItem('limites_stock_variantes');
+      if (guardado) setLimitesStock(JSON.parse(guardado));
+    } catch (error) {
+      console.error('Error al cargar límites de stock:', error);
+    }
+  };
+
   useEffect(() => {
     cargarCategorias();
     actualizarConteo();
+    cargarLimitesStock();
   }, [tabActiva]);
 
   useEffect(() => {
@@ -102,11 +115,14 @@ export default function GestionarCatalogoScreen() {
   const seleccionarModoNuevaVariante = () => {
     setVarianteEditandoId(null);
     setNombreVariante('');
+    setAlertaStockMinimo('10');
   };
 
   const seleccionarVarianteParaEditar = (v: Variante) => {
     setVarianteEditandoId(v.id);
     setNombreVariante(v.nombre);
+    const limite = limitesStock[v.id] !== undefined ? limitesStock[v.id] : 10;
+    setAlertaStockMinimo(limite.toString());
   };
 
   const handleCrearCategoria = async () => {
@@ -123,8 +139,7 @@ export default function GestionarCatalogoScreen() {
       Alert.alert('Error', error.message);
     }
   };
-
-  const handleGuardarVariante = async () => {
+const handleGuardarVariante = async () => {
     if (!catSeleccionadaVar) {
       Alert.alert('Error', 'Debes seleccionar una categoría');
       return;
@@ -134,16 +149,28 @@ export default function GestionarCatalogoScreen() {
       return;
     }
 
+    const limiteNum = parseInt(alertaStockMinimo, 10);
+    if (isNaN(limiteNum) || limiteNum < 0) {
+      Alert.alert('Error', 'La alerta de stock bajo debe ser 0 o mayor');
+      return;
+    }
+
     try {
+      let idVarianteGuardada: number;
+
       if (varianteEditandoId) {
-        // Actualizar variante existente SIN promoción
         await actualizarVariante(varianteEditandoId, nombreVariante.trim(), null, null);
+        idVarianteGuardada = varianteEditandoId;
         Alert.alert('¡Éxito!', 'Variante actualizada correctamente');
       } else {
-        // Crear variante nueva SIN promoción
-        await crearVariante(catSeleccionadaVar, nombreVariante.trim(), null, null);
+        idVarianteGuardada = await crearVariante(catSeleccionadaVar, nombreVariante.trim(), null, null);
         Alert.alert('¡Éxito!', 'Variante creada correctamente');
       }
+
+      // Guardar el límite de stock bajo para esta variante
+      const nuevosLimites = { ...limitesStock, [idVarianteGuardada]: limiteNum };
+      setLimitesStock(nuevosLimites);
+      await AsyncStorage.setItem('limites_stock_variantes', JSON.stringify(nuevosLimites));
 
       await cargarVariantesParaEdicion(catSeleccionadaVar);
       setCatSeleccionadaProd(catSeleccionadaVar);
@@ -225,11 +252,11 @@ export default function GestionarCatalogoScreen() {
 
       <View style={styles.tabsContainer}>
         <TouchableOpacity
-          style={[styles.tab, tabActiva === 'producto' && styles.tabActiva]}
-          onPress={() => setTabActiva('producto')}
+          style={[styles.tab, tabActiva === 'categoria' && styles.tabActiva]}
+          onPress={() => setTabActiva('categoria')}
         >
-          <AppText variant="caption" color={tabActiva === 'producto' ? '#fff' : Palette.textSecondary} style={{ fontWeight: 'bold' }}>
-            Producto
+          <AppText variant="caption" color={tabActiva === 'categoria' ? '#fff' : Palette.textSecondary} style={{ fontWeight: 'bold' }}>
+            Categoría
           </AppText>
         </TouchableOpacity>
         <TouchableOpacity
@@ -241,11 +268,11 @@ export default function GestionarCatalogoScreen() {
           </AppText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, tabActiva === 'categoria' && styles.tabActiva]}
-          onPress={() => setTabActiva('categoria')}
+          style={[styles.tab, tabActiva === 'producto' && styles.tabActiva]}
+          onPress={() => setTabActiva('producto')}
         >
-          <AppText variant="caption" color={tabActiva === 'categoria' ? '#fff' : Palette.textSecondary} style={{ fontWeight: 'bold' }}>
-            Categoría
+          <AppText variant="caption" color={tabActiva === 'producto' ? '#fff' : Palette.textSecondary} style={{ fontWeight: 'bold' }}>
+            Producto
           </AppText>
         </TouchableOpacity>
       </View>
@@ -255,7 +282,7 @@ export default function GestionarCatalogoScreen() {
           <View style={styles.formCard}>
             <AppText variant="sectionTitle" style={{ marginBottom: 4 }}>Nueva Categoría</AppText>
             <AppText variant="caption" style={{ marginBottom: 18 }}>
-              Ejemplo: Chapas, Stickers, Accesorios
+              Categoria es un grupo de productos que comparten características similares. Por ejemplo, "Prints", "Chapas", "Llaveros", etc.
             </AppText>
 
             <View style={styles.inputContainer}>
@@ -274,6 +301,7 @@ export default function GestionarCatalogoScreen() {
               <AppText variant="button">Guardar Categoría</AppText>
             </TouchableOpacity>
           </View>
+          
         )}
 
         {tabActiva === 'variante' && (
@@ -282,7 +310,7 @@ export default function GestionarCatalogoScreen() {
               {varianteEditandoId ? 'Editar Variante' : 'Nueva Variante'}
             </AppText>
             <AppText variant="caption" style={{ marginBottom: 18 }}>
-              Crea una variante o toca una existente para modificar su nombre
+              Las variantes son subcategorías dentro de una categoría. Por ejemplo, si la categoría es "Chapas", las variantes podrían ser "Chapa Grande", "Chapa Mediana" y "Chapa Pequeña".
             </AppText>
 
             {renderSelectorCategorias(catSeleccionadaVar, setCatSeleccionadaVar)}
@@ -293,14 +321,7 @@ export default function GestionarCatalogoScreen() {
                   ¿Crear nueva o editar existente?
                 </AppText>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-                  <TouchableOpacity
-                    style={[styles.chip, varianteEditandoId === null && styles.chipActivoVar]}
-                    onPress={seleccionarModoNuevaVariante}
-                  >
-                    <AppText variant="bodyBold" color={varianteEditandoId === null ? '#fff' : Palette.textSecondary}>
-                      + Crear Nueva
-                    </AppText>
-                  </TouchableOpacity>
+                
 
                   {variantesDeCatVar.map((vari) => {
                     const activa = varianteEditandoId === vari.id;
@@ -321,7 +342,9 @@ export default function GestionarCatalogoScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <AppText variant="bodyBold" style={{ marginBottom: 8 }}>Nombre de la Variante</AppText>
+              <AppText variant="bodyBold" style={{ marginBottom: 8 }}>
+                Nombre de la Variante
+              </AppText>
               <TextInput
                 style={styles.input}
                 placeholder="Ej. Chapa Grande"
@@ -331,6 +354,22 @@ export default function GestionarCatalogoScreen() {
               />
             </View>
 
+            <View style={styles.inputContainer}>
+              <AppText variant="bodyBold" style={{ marginBottom: 4 }}>
+                Alerta de Stock Bajo (Mínimo)
+              </AppText>
+              <AppText variant="caption" color={Palette.textMuted} style={{ marginBottom: 8 }}>
+                Pon 0 si no quieres recibir avisos de stock bajo en esta variante.
+              </AppText>
+              <TextInput
+                style={styles.input}
+                placeholder="10"
+                placeholderTextColor={Palette.textMuted}
+                keyboardType="numeric"
+                value={alertaStockMinimo}
+                onChangeText={setAlertaStockMinimo}
+              />
+            </View>
             <TouchableOpacity style={styles.submitButton} onPress={handleGuardarVariante}>
               <Ionicons name="save-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
               <AppText variant="button">
@@ -344,7 +383,7 @@ export default function GestionarCatalogoScreen() {
           <View style={styles.formCard}>
             <AppText variant="sectionTitle" style={{ marginBottom: 4 }}>Nuevo Producto</AppText>
             <AppText variant="caption" style={{ marginBottom: 18 }}>
-              Agrega un nuevo ítem a tu inventario
+              Los productos son los artículos que vendes. Cada producto pertenece a una categoría y a una variante. Por ejemplo, un producto podría ser "Chapita Chikawa" que pertenece a la categoría "Chapas" y a la variante "Chapa Grande".
             </AppText>
 
             {renderSelectorCategorias(catSeleccionadaProd, setCatSeleccionadaProd, true)}

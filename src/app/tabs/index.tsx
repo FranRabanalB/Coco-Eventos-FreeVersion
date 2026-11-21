@@ -193,11 +193,12 @@ export default function HomeScreen() {
             <AppText
               variant="sectionTitle"
               color="#fff"
+              align="center"
               style={{ marginTop: 4 }}
             >
               ${stats.totalVentas}
             </AppText>
-            <AppText variant="caption" color="#fff">
+            <AppText variant="caption" color="#fff" align="center">
               Ventas Totales
             </AppText>
           </View>
@@ -207,10 +208,11 @@ export default function HomeScreen() {
               variant="sectionTitle"
               color="#fff"
               style={{ marginTop: 4 }}
+              align="center"
             >
               {stats.totalProductos}
             </AppText>
-            <AppText variant="caption" color="#fff">
+            <AppText variant="caption" color="#fff" align="center">
               Productos
             </AppText>
           </View>
@@ -220,10 +222,11 @@ export default function HomeScreen() {
               variant="sectionTitle"
               color="#fff"
               style={{ marginTop: 4 }}
+              align="center"  
             >
               {stats.stockBajo}
             </AppText>
-            <AppText variant="caption" color="#fff">
+            <AppText variant="caption" color="#fff" align="center">
               Stock Bajo
             </AppText>
           </View>

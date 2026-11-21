@@ -13,9 +13,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ajustarStock,
-  getProductosStockBajo,
   Producto,
 } from '../../database/queries';
 import { useCatalogo } from '../../hooks/use-catalogo';
@@ -46,18 +46,53 @@ export default function InventarioScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [cantidadAjuste, setCantidadAjuste] = useState('');
   const [tipoAjuste, setTipoAjuste] = useState<'agregar' | 'quitar'>('agregar');
-  const [stockBajoCount, setStockBajoCount] = useState(0);
 
-  const actualizarConteoStockBajo = useCallback(async () => {
-    const stockBajo = await getProductosStockBajo(10);
-    setStockBajoCount(stockBajo.length);
-  }, []);
+  // Estados para alerta de stock bajo por variante
+  const [limitesPorVariante, setLimitesPorVariante] = useState<Record<number, number>>({});
+  const [modalAlertaVisible, setModalAlertaVisible] = useState(false);
+  const [nuevoLimite, setNuevoLimite] = useState('10');
 
   useFocusEffect(
     useCallback(() => {
-      actualizarConteoStockBajo();
-    }, [actualizarConteoStockBajo])
+      const cargarLimites = async () => {
+        try {
+          const guardado = await AsyncStorage.getItem('limites_stock_variantes');
+          if (guardado) setLimitesPorVariante(JSON.parse(guardado));
+        } catch (e) {
+          console.error('Error cargando límites:', e);
+        }
+      };
+      cargarLimites();
+    }, [])
   );
+
+  // Límite activo para la variante seleccionada (por defecto 10; 0 = desactivado)
+  const limiteActual =
+    varianteSeleccionada !== null && limitesPorVariante[varianteSeleccionada] !== undefined
+      ? limitesPorVariante[varianteSeleccionada]
+      : 10;
+
+  const productosBajos =
+    limiteActual > 0 ? productos.filter((p) => p.stock < limiteActual) : [];
+
+  const abrirModalAlerta = () => {
+    setNuevoLimite(limiteActual.toString());
+    setModalAlertaVisible(true);
+  };
+
+  const guardarLimiteAlerta = async () => {
+    if (varianteSeleccionada === null) return;
+    const valor = parseInt(nuevoLimite, 10);
+    if (isNaN(valor) || valor < 0) {
+      Alert.alert('Error', 'Ingresa un número válido (0 o mayor)');
+      return;
+    }
+
+    const actualizados = { ...limitesPorVariante, [varianteSeleccionada]: valor };
+    setLimitesPorVariante(actualizados);
+    await AsyncStorage.setItem('limites_stock_variantes', JSON.stringify(actualizados));
+    setModalAlertaVisible(false);
+  };
 
   const abrirModalAjuste = (producto: Producto) => {
     setProductoSeleccionado(producto);
@@ -69,7 +104,7 @@ export default function InventarioScreen() {
   const confirmarAjuste = async () => {
     if (!productoSeleccionado) return;
 
-    const cantidad = parseInt(cantidadAjuste);
+    const cantidad = parseInt(cantidadAjuste, 10);
     if (isNaN(cantidad) || cantidad <= 0) {
       Alert.alert('Error', 'Ingresa una cantidad válida');
       return;
@@ -82,7 +117,6 @@ export default function InventarioScreen() {
       await ajustarStock(productoSeleccionado.id, cantidadReal, motivo);
       setModalVisible(false);
       await recargarProductosActuales();
-      await actualizarConteoStockBajo();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo ajustar el stock');
     }
@@ -105,23 +139,43 @@ export default function InventarioScreen() {
         subtitle={`Inventario · ${productos.length} productos`}
         rightContent={
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {stockBajoCount > 0 && (
+            {productosBajos.length > 0 && (
               <TouchableOpacity
                 style={styles.badgeButton}
                 onPress={() => {
-                  const bajos = productos.filter((p) => p.stock < 10);
-                  if (bajos.length > 0) {
-                    const nombres = bajos.map((p) => `• ${p.nombre} (${p.stock})`).join('\n');
-                    Alert.alert(' Stock bajo en esta variante', nombres);
-                  }
+                  const nombres = productosBajos
+                    .map((p) => `• ${p.nombre} (${p.stock})`)
+                    .join('\n');
+                  Alert.alert(
+                    `Stock bajo (< ${limiteActual})`,
+                    nombres,
+                    [
+                      { text: 'Ajustar mínimo', onPress: abrirModalAlerta },
+                      { text: 'OK', style: 'cancel' },
+                    ]
+                  );
                 }}
               >
                 <Ionicons name="warning" size={18} color={Palette.coralStrong} />
                 <AppText variant="caption" color={Palette.coralStrong} style={{ marginLeft: 5, fontWeight: 'bold' }}>
-                  {stockBajoCount}
+                  {productosBajos.length}
                 </AppText>
               </TouchableOpacity>
             )}
+
+            {varianteSeleccionada !== null && (
+              <TouchableOpacity
+                style={[styles.badgeButton, { marginLeft: 6, paddingHorizontal: 9 }]}
+                onPress={abrirModalAlerta}
+              >
+                <Ionicons
+                  name={limiteActual === 0 ? 'notifications-off-outline' : 'notifications-outline'}
+                  size={18}
+                  color={Palette.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[styles.badgeButton, styles.newCatalogButton]}
               onPress={() => router.push('/tabs/gestionar-catalogo' as any)}
@@ -170,7 +224,7 @@ export default function InventarioScreen() {
               <View
                 style={[
                   styles.stockBadge,
-                  item.stock < 10 && styles.stockBadgeLow,
+                  limiteActual > 0 && item.stock < limiteActual && styles.stockBadgeLow,
                   item.stock <= 0 && styles.stockBadgeEmpty,
                 ]}
               >
@@ -194,6 +248,7 @@ export default function InventarioScreen() {
         }
       />
 
+      {/* Modal para ajustar stock de producto */}
       <Modal
         visible={modalVisible}
         animationType="fade"
@@ -287,6 +342,56 @@ export default function InventarioScreen() {
                 </View>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal para configurar alerta de stock bajo por variante */}
+      <Modal
+        visible={modalAlertaVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setModalAlertaVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <AppText variant="sectionTitle">Alerta de Stock Bajo</AppText>
+              <TouchableOpacity onPress={() => setModalAlertaVisible(false)}>
+                <Ionicons name="close" size={24} color={Palette.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <AppText variant="caption" color={Palette.textSecondary} style={{ marginBottom: 15 }}>
+              Avisar cuando un producto de esta variante tenga menos de esta cantidad. Pon 0 para desactivar el aviso.
+            </AppText>
+
+            <View style={styles.cantidadContainer}>
+              <AppText variant="cardTitle" style={{ marginRight: 15 }}>Mínimo:</AppText>
+              <TextInput
+                style={styles.cantidadInput}
+                value={nuevoLimite}
+                onChangeText={setNuevoLimite}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={Palette.textMuted}
+              />
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setModalAlertaVisible(false)}
+              >
+                <AppText variant="bodyBold" color={Palette.textSecondary}>Cancelar</AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={guardarLimiteAlerta}
+              >
+                <AppText variant="button">Guardar</AppText>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
